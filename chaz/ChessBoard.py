@@ -6,9 +6,11 @@ class ChessBoard:
 		if len(args) == 0:
 			self.pieces = []
 			self.activeColor = COLOR.WHITE
-			self.reset()
 			self.halfMove = 0
 			self.fullMove = 1
+			self.overlayOn = False
+			self.overlayPiece = None
+			self.reset()
 		elif len(args) == 1:
 			# Set board to mimic FEN input
 			raise NotImplementedError()
@@ -37,21 +39,88 @@ class ChessBoard:
 		for ChessPiece in self.pieces:
 			if(ChessPiece.pos.file == pos.file and ChessPiece.pos.rank == pos.rank):
 				return ChessPiece
+	def setOverlayPiece(self, piece):
+		self.overlayPiece = piece
+		self.overlayOn = True
+	def turnOffOverlay(self):
+		self.overlayPiece = None
+		self.overlayOn = False
 	def render(self):
+		overlayPositions = []
+		if(self.overlayOn):overlayPositions = self.overlayPiece.possibleMovementPositionsOnBoard(self)
 		print('-' * 10)
 		for rank in range(7, -1, -1):
 			print('|', end='')
 			for file in range(0, 8):
-				piece = self.pieceAt(ChessPosition(file, rank))
-				if(piece):piece.render()
-				else:
-					if(rank%2 == 0 and file%2 != 0):print(' ', end='')
-					elif(rank%2 != 0 and file%2 == 0):print(' ', end='')
-					else:print("\u2592", end='')
+				pos = ChessPosition(file, rank)
+				piece = self.pieceAt(pos)
+				overlayAlreadyWritten = False
+				for _pos in overlayPositions:
+					if(_pos.isEqualTo(pos)):
+						if(_pos.metaData == POSITION_METADATA.MOVEMENT):print("X", end='');
+						elif(_pos.metaData == POSITION_METADATA.ATTACK):print("A", end='');
+						overlayAlreadyWritten = True
+				if(not overlayAlreadyWritten):
+					if(piece):piece.render()
+					else:
+						if(rank%2 == 0 and file%2 != 0):print(' ', end='')
+						elif(rank%2 != 0 and file%2 == 0):print(' ', end='')
+						else:print("\u2592", end='')
 			print('|', end='')
 			print('')
 		print('-' * 10)
 		print(self.FENNotation())
+	def emptyDirectHorizontalTo(self, a, b):
+		if(a.rank != b.rank):return False
+		if(a.file < b.file):direction = 1
+		else:direction = -1
+		delta = abs(a.file - b.file)+1
+		for d in range(1, delta):
+			obsticle = self.pieceAt(ChessPosition(a.file + d*direction, a.rank))
+			if(obsticle):return False
+		return True
+	def emptyDirectVerticalTo(self, a, b):
+		if(a.file != b.file):return False
+		if(a.rank < b.rank):direction = 1
+		else:direction = -1
+		delta = abs(a.rank - b.rank)+1
+		for d in range(1, delta):
+			obsticle = self.pieceAt(ChessPosition(a.file, a.rank + d*direction))
+			if(obsticle):return False
+		return True
+	def emptyDirectDiagonalTo(self, a, b):
+		if(abs(a.file - b.file) != abs(a.rank - b.rank)):return False
+		if(a.file < b.file):xDirection = 1
+		else:xDirection = -1
+		if(a.rank < b.rank):yDirection = 1
+		else:yDirection = -1
+		delta = abs(a.file - b.file) + 1
+		for d in range(1, delta):
+			obsticle = self.pieceAt(ChessPosition(a.file + d*xDirection, a.rank + d*yDirection))
+			if(obsticle):return False
+		return True
+	# firstHorizontal/Vertical/DiagonallyCollidedPiceWithinRange can probably be refactored into one method
+	def firstHorizontallyCollidedPieceWithinRange(self, a, totalRange, direction):
+		for d in range(1, totalRange+1):
+			_pos = ChessPosition(a.file + d*direction, a.rank)
+			if(_pos.isOnBoard()):
+				obsticle = self.pieceAt(_pos)
+				if(obsticle):return obsticle
+		return None
+	def firstVerticallyCollidedPieceWithinRange(self, a, totalRange, direction):
+		for d in range(1, totalRange+1):
+			_pos = ChessPosition(a.file, a.rank + d*direction)
+			if(_pos.isOnBoard()):
+				obsticle = self.pieceAt(_pos)
+				if(obsticle):return obsticle
+		return None
+	def firstDiagonallyCollidedPieceWithinRange(self, a, totalRange, xDirection, yDirection):
+		for d in range(1, totalRange+1):
+			_pos = ChessPosition(a.file + d*xDirection, a.rank + d*yDirection)
+			if(_pos.isOnBoard()):
+				obsticle = self.pieceAt(_pos)
+				if(obsticle):return obsticle
+		return None
 	def isAValidMove(self, move):
 		# Move shall be in the format 'FromTo' e.g. 'a2a3'
 		return True
