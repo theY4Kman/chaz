@@ -1,5 +1,9 @@
+import copy
+
 class TYPE:P, N, B, R, Q, K = range(6)
 TypeIcons = "PNBRQKpnbrqk"
+
+FileNames = "abcdefgh"
 
 class COLOR:WHITE, BLACK = range(2)
 
@@ -11,12 +15,16 @@ class ChessPosition:
 		elif len(args) == 2:	# Index of file followed by index of row
 			self.file = args[0]
 			self.rank = args[1]
+	def toParsableString(self):
+		return FileNames[self.file] + str(self.rank + 1)
 
 class ChessPiece:
 	def __init__(self, type, color, pos):
 		self.type = type
 		self.color = color
 		self.pos = pos
+		self.hasMoved = False
+		self.pawnJustMovedForwardTwice = False
 	def icon(self):
 		index = self.type
 		if(self.color == COLOR.BLACK):index += TYPE.K+1
@@ -25,9 +33,16 @@ class ChessPiece:
 		print(self.icon(), end='')
 
 class ChessBoard:
-	pieces = []
-	def __init__(self):
-		self.reset()
+	def __init__(self, *args):
+		if len(args) == 0:
+			self.pieces = []
+			self.activeColor = COLOR.WHITE
+			self.reset()
+			self.halfMove = 0
+			self.fullMove = 1
+		elif len(args) == 1:
+			# Set board to mimic FEN input
+			raise NotImplementedError()
 	def reset(self):
 		for d in range(0, 8):
 			self.pieces.append(ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition(d, 1)))
@@ -67,3 +82,56 @@ class ChessBoard:
 			print('|', end='')
 			print('')
 		print('-' * 10)
+		print(self.FENNotation())
+
+
+	def FENNotation(self):
+		emptyCount = 0
+		retVal = ""
+		for rank in range(7, -1, -1):
+			for file in range(0, 8):
+				piece = self.pieceAt(ChessPosition(file, rank))
+				if(piece):
+					if(emptyCount > 0):
+						retVal += str(emptyCount)
+						emptyCount = 0
+					retVal += piece.icon()
+				else:emptyCount = emptyCount + 1
+			if(emptyCount > 0):retVal += str(emptyCount)
+			emptyCount = 0
+			if(rank != 0):retVal += "/"
+		retVal += " "
+		if(self.activeColor == COLOR.WHITE):retVal += "w"
+		if(self.activeColor == COLOR.BLACK):retVal += "b"
+		retVal += " "
+		castling = ""
+		whiteKing = self.pieceAt(ChessPosition("e1"))
+		whiteQueenSideRook = self.pieceAt(ChessPosition("a1"))
+		whiteKingSideRook = self.pieceAt(ChessPosition("h1"))
+		blackKing = self.pieceAt(ChessPosition("e8"))
+		blackQueenSideRook = self.pieceAt(ChessPosition("a8"))
+		blackKingSideRook = self.pieceAt(ChessPosition("h8"))
+		if((whiteKing is not None and whiteKingSideRook is not None) and (not whiteKing.hasMoved and not whiteKingSideRook.hasMoved)):castling += "K"
+		if((whiteKing is not None and whiteQueenSideRook is not None) and (not whiteKing.hasMoved and not whiteQueenSideRook.hasMoved)):castling += "Q"
+		if((blackKing is not None and blackKingSideRook is not None) and (not blackKing.hasMoved and not blackKingSideRook.hasMoved)):castling += "k"
+		if((blackKing is not None and blackQueenSideRook is not None) and (not blackKing.hasMoved and not blackQueenSideRook.hasMoved)):castling += "q"
+		if(castling == ""):castling += "-"
+		retVal += castling
+		retVal += " "
+		# Oddly enough the En Passant point is the spot 'behind' the moved pawn
+		enPassant = ""
+		for d in range(0, len(self.pieces)):
+			if(self.pieces[d].pawnJustMovedForwardTwice):
+				pos = copy.deepcopy(self.pieces[d].pos)
+				direction = 1
+				if(self.pieces[d].color == COLOR.BLACK):direction = -1
+				pos.rank -= direction
+				enPassant = pos.toParsableString()
+				break
+		if(enPassant == ""):enPassant = "-"
+		retVal += enPassant
+		retVal += " "
+		retVal += str(self.halfMove)
+		retVal += " "
+		retVal += str(self.fullMove)
+		return retVal
