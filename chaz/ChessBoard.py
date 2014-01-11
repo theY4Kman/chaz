@@ -1,36 +1,5 @@
 import copy
-
-class TYPE:P, N, B, R, Q, K = range(6)
-TypeIcons = "PNBRQKpnbrqk"
-
-FileNames = "abcdefgh"
-
-class COLOR:WHITE, BLACK = range(2)
-
-class ChessPosition:
-	def __init__(self, *args):
-		if len(args) == 1:		# String such as "a3" or "h7"
-			self.file = ord((args[0][0])) - ord('a')
-			self.rank = (int)(args[0][1]) - 1
-		elif len(args) == 2:	# Index of file followed by index of row
-			self.file = args[0]
-			self.rank = args[1]
-	def toParsableString(self):
-		return FileNames[self.file] + str(self.rank + 1)
-
-class ChessPiece:
-	def __init__(self, type, color, pos):
-		self.type = type
-		self.color = color
-		self.pos = pos
-		self.hasMoved = False
-		self.pawnJustMovedForwardTwice = False
-	def icon(self):
-		index = self.type
-		if(self.color == COLOR.BLACK):index += TYPE.K+1
-		return TypeIcons[index]
-	def render(self):
-		print(self.icon(), end='')
+from ChessPiece import *
 
 class ChessBoard:
 	def __init__(self, *args):
@@ -83,8 +52,9 @@ class ChessBoard:
 			print('')
 		print('-' * 10)
 		print(self.FENNotation())
-
-
+	def isAValidMove(self, move):
+		# Move shall be in the format 'FromTo' e.g. 'a2a3'
+		return True
 	def FENNotation(self):
 		emptyCount = 0
 		retVal = ""
