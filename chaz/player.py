@@ -1,6 +1,6 @@
 class BasePlayer(object):
-    def setup(self, color, state):
-        pass
+	def setup(self, color, state):
+		pass
 
-    def next_move(self, state):
-        raise NotImplementedError()
+	def next_move(self, state):
+		raise NotImplementedError()
