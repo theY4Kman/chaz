@@ -1,3 +1,5 @@
+import copy
+
 class POSITION_METADATA:MOVEMENT, ATTACK, NOTHING = range(3)
 FileNames = "abcdefgh"
 
@@ -18,3 +20,8 @@ class ChessPosition:
 	def isEqualTo(self, pos):
 		if(self.file == pos.file and self.rank == pos.rank):return True
 		return False
+	def copy(self):
+		return copy.deepcopy(self)
+	def affect(self, xDelta, yDelta):
+		self.file += xDelta
+		self.rank += yDelta
