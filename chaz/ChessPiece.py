@@ -4,6 +4,21 @@ from ChessBoard import *
 class TYPE:P, N, B, R, Q, K = range(6)
 TypeIcons = "PNBRQKpnbrqk"
 
+# I don't like this, refactor later
+def TypeForIcon(icon):
+	if(icon == 'P'):return TYPE.P
+	if(icon == 'N'):return TYPE.N
+	if(icon == 'B'):return TYPE.B
+	if(icon == 'R'):return TYPE.R
+	if(icon == 'Q'):return TYPE.Q
+	if(icon == 'K'):return TYPE.K
+	if(icon == 'p'):return TYPE.P
+	if(icon == 'n'):return TYPE.N
+	if(icon == 'b'):return TYPE.B
+	if(icon == 'r'):return TYPE.R
+	if(icon == 'q'):return TYPE.Q
+	if(icon == 'k'):return TYPE.K
+
 class COLOR:WHITE, BLACK = range(2)
 
 # Pawn Movement: Finished
@@ -40,8 +55,12 @@ class ChessPiece:
 		return TypeIcons[index]
 	def render(self):
 		print(self.icon(), end='')
-	def possibleMovements(self, totalRange, xDirection, yDirection):
+	def allPossibleMoves(self, board):
 		retVal = []
+		positions = self.possibleMovementPositionsOnBoard(board)
+		for position in positions:
+			retVal.append(ChessMove(self.pos, position, board))
+		return retVal
 	def possibleMovementPositionsOnBoard(self, board):
 		retVal = []
 		if(self.type == TYPE.P):

@@ -1,4 +1,5 @@
 from ChessPiece import *
+from ChessMove import *
 
 class ChessBoard:
 	def __init__(self, *args):
@@ -115,7 +116,7 @@ class ChessBoard:
 				if(obsticle):return obsticle
 		return None
 	def isAValidMove(self, move):
-		# Move shall be in the format 'FromTo' e.g. 'a2a3'
+		assert(move.__class__ == ChessMove)
 		raise NotImplementedError()
 	def FENNotation(self):
 		emptyCount = 0
