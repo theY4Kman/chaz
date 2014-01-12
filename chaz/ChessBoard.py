@@ -155,7 +155,7 @@ class ChessBoard:
 		enPassant = ""
 		for d in range(0, len(self.pieces)):
 			if(self.pieces[d].pawnJustMovedForwardTwice):
-				pos = copy.deepcopy(self.pieces[d].pos)
+				pos = self.pieces[d].pos.copy()
 				direction = 1
 				if(self.pieces[d].color == COLOR.BLACK):direction = -1
 				pos.rank -= direction
