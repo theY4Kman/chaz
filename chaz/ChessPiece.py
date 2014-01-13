@@ -29,6 +29,7 @@ class COLOR:WHITE, BLACK = range(2)
 # Queen Movement: Finished
 # King Movement: Unfinished
 #	Currently King can move into check
+#	Currently King cannot castle
 
 class ChessPiece:
 	def __init__(self, type, color, pos):
@@ -53,12 +54,6 @@ class ChessPiece:
 		return TypeIcons[index]
 	def render(self):
 		print(self.icon(), end='')
-	def allPossibleMoves(self, board):
-		retVal = []
-		positions = self.possibleMovementPositionsOnBoard(board)
-		for position in positions:
-			retVal.append(ChessMove(self.pos, position, board))
-		return retVal
 	def possibleMovementPositionsOnBoard(self, board):
 		retVal = []
 		if(self.type == TYPE.P):

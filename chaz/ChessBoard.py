@@ -117,7 +117,38 @@ class ChessBoard:
 		return None
 	def isAValidMove(self, move):
 		assert(move.__class__ == ChessMove)
-		raise NotImplementedError()
+		piece = self.pieceAt(move.fromPosition)
+		# Wha'chu mean you want to move a piece that doesn't exist?! You cray cray
+		if(piece == None):return False
+		occupant = self.pieceAt(move.toPosition)
+		for pos in piece.possibleMovementPositionsOnBoard(self):
+			if(pos.isEqualTo(move.toPosition)):
+				# Trying to move to a board position with an occupant opponent but not capturing it is strictly forbidden
+				if(occupant != None and occupant.isOpponent(piece) and not move.isCaptureMove):return False
+				# Trying to capture on a board position without an opponent is silly, and strictly forbidden
+				if(occupant == None and move.isCaptureMove):return False
+				# Special situation where pawn is expected to promote but doesn't
+				if(piece.type == TYPE.P):
+					if(piece.color == COLOR.WHITE and move.toPosition.rank == 7 and not move.isPromoteMove):return False
+					if(piece.color == COLOR.BLACK and move.toPosition.rank == 0 and not move.isPromoteMove):return False
+				return True
+		return False
+	def processMove(self, move):
+		if(self.isAValidMove(move)):
+			piece = self.pieceAt(move.fromPosition)
+			if(move.isCaptureMove):
+				toCapture = self.pieceAt(move.toPosition)
+				self.pieces.remove(toCapture)
+			if(move.isPromoteMove):
+				piece.type = move.promoteType
+			if(move.isKingsideCastle):
+				pass
+			if(move.isQueensideCastle):
+				pass
+			piece.pos = move.toPosition
+			# Process move/halfmove counter and other stuffs
+		else:
+			print("Tried to play illigal move:", move.notation)
 	def FENNotation(self):
 		emptyCount = 0
 		retVal = ""
