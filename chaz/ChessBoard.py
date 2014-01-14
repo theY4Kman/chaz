@@ -6,8 +6,8 @@ class ChessBoard:
 		if len(args) == 0:
 			self.pieces = []
 			self.activeColor = COLOR.WHITE
-			self.halfMove = 0
-			self.fullMove = 1
+			self.halfMoves = 0
+			self.fullMoves = 1
 			self.overlayOn = False
 			self.overlayPiece = None
 			self.reset()
@@ -118,19 +118,25 @@ class ChessBoard:
 	def isAValidMove(self, move):
 		assert(move.__class__ == ChessMove)
 		piece = self.pieceAt(move.fromPosition)
-		# Wha'chu mean you want to move a piece that doesn't exist?! You cray cray
-		if(piece == None):return False
+		if(piece == None):
+			print("Wha'chu mean you want to move a piece that doesn't exist?! You cray cray")
+			return False
+		if(piece.color != self.activeColor):
+			print("You mean it's not your turn, and your trying to move anyways? CHEATER!")
+			return False
 		occupant = self.pieceAt(move.toPosition)
 		for pos in piece.possibleMovementPositionsOnBoard(self):
 			if(pos.isEqualTo(move.toPosition)):
-				# Trying to move to a board position with an occupant opponent but not capturing it is strictly forbidden
-				if(occupant != None and occupant.isOpponent(piece) and not move.isCaptureMove):return False
-				# Trying to capture on a board position without an opponent is silly, and strictly forbidden
-				if(occupant == None and move.isCaptureMove):return False
-				# Special situation where pawn is expected to promote but doesn't
+				if(occupant != None and occupant.isOpponent(piece) and not move.isCaptureMove):
+					print("Trying to move to a board position with an occupant opponent but not capturing it is strictly forbidden")
+					return False
+				if(occupant == None and move.isCaptureMove):
+					print("Trying to capture on a board position without an opponent is silly, and strictly forbidden")
+					return False
 				if(piece.type == TYPE.P):
-					if(piece.color == COLOR.WHITE and move.toPosition.rank == 7 and not move.isPromoteMove):return False
-					if(piece.color == COLOR.BLACK and move.toPosition.rank == 0 and not move.isPromoteMove):return False
+					if(piece.isPositionOnFarthestRank(piece.pos)):
+						print("A pawn was supposed to promote, but didn't. Can't handle the responsibilities?!")
+						return False
 				return True
 		return False
 	def processMove(self, move):
@@ -141,14 +147,21 @@ class ChessBoard:
 				self.pieces.remove(toCapture)
 			if(move.isPromoteMove):
 				piece.type = move.promoteType
-			if(move.isKingsideCastle):
+			if(move.castleType == CASTLETYPE.K):
 				pass
-			if(move.isQueensideCastle):
+			if(move.castleType == CASTLETYPE.Q):
 				pass
 			piece.pos = move.toPosition
-			# Process move/halfmove counter and other stuffs
+
+			if(move.isPawnMove or move.isCaptureMove):self.halfMoves = 0
+			else:self.halfMoves += 1
+			if(self.activeColor == COLOR.WHITE):
+				self.activeColor = COLOR.BLACK
+			else:
+				self.fullMoves += 1
+				self.activeColor = COLOR.WHITE
 		else:
-			print("Tried to play illigal move:", move.notation)
+			print("Tried to play illigal move:", move.notation())
 	def FENNotation(self):
 		emptyCount = 0
 		retVal = ""
@@ -195,7 +208,7 @@ class ChessBoard:
 		if(enPassant == ""):enPassant = "-"
 		retVal += enPassant
 		retVal += " "
-		retVal += str(self.halfMove)
+		retVal += str(self.halfMoves)
 		retVal += " "
-		retVal += str(self.fullMove)
+		retVal += str(self.fullMoves)
 		return retVal

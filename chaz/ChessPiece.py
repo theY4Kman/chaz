@@ -54,6 +54,10 @@ class ChessPiece:
 		return TypeIcons[index]
 	def render(self):
 		print(self.icon(), end='')
+	def isPositionOnFarthestRank(self, _pos):
+		if(self.isWhite and self.type == TYPE.P and _pos.rank == 7):return True
+		if(self.isBlack and self.type == TYPE.P and _pos.rank == 0):return True
+		return False
 	def possibleMovementPositionsOnBoard(self, board):
 		retVal = []
 		if(self.type == TYPE.P):
