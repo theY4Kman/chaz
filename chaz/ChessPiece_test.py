@@ -45,10 +45,7 @@ simulatorManager.board.clear()
 piece = ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition("b2"))
 simulatorManager.board.setOverlayTo(piece)
 simulatorManager.board.pieces.append(piece)
-simulatorManager.board.pieces.append(
-    ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("a3")))
-simulatorManager.board.pieces.append(
-    ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("c3")))
+simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("a3")))
 simulatorManager.board.render()
 
 input("Press Enter to continue...")
@@ -58,10 +55,7 @@ simulatorManager.board.clear()
 piece = ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("b7"))
 simulatorManager.board.setOverlayTo(piece)
 simulatorManager.board.pieces.append(piece)
-simulatorManager.board.pieces.append(
-    ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition("a6")))
-simulatorManager.board.pieces.append(
-    ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition("c6")))
+simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition("c6")))
 simulatorManager.board.render()
 
 input("Press Enter to continue...")
@@ -98,6 +92,8 @@ simulatorManager.board.pieces.append(piece)
 simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition("b4")))  # Should not move/attack
 simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("d7")))  # Should move/attack
 simulatorManager.board.render()
+
+input("Press Enter to continue...")
 
 # Queen
 simulatorManager.board.clear()

@@ -7,6 +7,7 @@ from ChessBoard import *
 class TYPE:P, N, B, R, Q, K = range(6)
 TypeIcons = "PNBRQKpnbrqk"
 
+
 # I don't like this, refactor later
 def TypeForIcon(icon):
     if(icon == 'P'):return TYPE.P
@@ -25,16 +26,6 @@ def TypeForIcon(icon):
 
 class COLOR:WHITE, BLACK = range(2)
 
-# Pawn Movement: Finished
-#   Pawn promotion will occur via board move method
-# Knight Movement: Finished
-# Bishop Movement: Finished
-# Rook Movement: Finished
-# Queen Movement: Finished
-# King Movement: Unfinished
-#   Currently King can move into check
-#   Currently King cannot castle
-
 
 class ChessPiece:
 
@@ -44,6 +35,7 @@ class ChessPiece:
         self.pos = pos
         self.hasMoved = False
         self.pawnJustMovedForwardTwice = False
+        self.startingPos = self.pos.copy()
 
     # Decided to set local variables instead of methods so I don't call self.isWhite instead of self.isWhite() by accident
     def setColor(self, color):
@@ -68,6 +60,13 @@ class ChessPiece:
 
     def render(self):
         print(self.icon(), end='')
+
+    def isOnStartingPawnPosition(self):
+        if(self.isWhite and self.pos.rank == 1):
+            return True
+        if(self.isBlack and self.pos.rank == 6):
+            return True
+        return False
 
     def isPositionOnFarthestRank(self, _pos):
         if(self.isWhite and self.type == TYPE.P and _pos.rank == 7):
