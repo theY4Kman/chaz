@@ -1,10 +1,18 @@
-# Allows print() function instead of print literal in versions < 3. The "end"
-# keyword parameter was not available before then.
 from __future__ import print_function
 
 from ChessPiece import *
 from ChessMove import *
 
+# Noteworthy optimizations:
+#   Possible movement positions for each piece are cached
+#      so that they do not have to be recalculated every check
+#       allowing simulators to access the position data often
+#       without potential slowdowns of the simulator. This mean
+#       the cache has to be flushed after every move of a piece
+#       otherwise antiquated-cache data might persist leading
+#       to incorrect future movement analysis on the board.
+#       This means it's important to move pieces ONLY via the
+#       processMove() function and no others
 
 class ChessBoard:
 
@@ -17,6 +25,7 @@ class ChessBoard:
             self.overlayOn = False
             self.overlayPiece = None
             self.reset()
+            self.possibleMovementPositionsCache = {}
         elif len(args) == 1:
             # TODO: Set board to mimic FEN input
             raise NotImplementedError()
@@ -47,6 +56,17 @@ class ChessBoard:
         self.turnOffOverlay()
         self.pieces = []
 
+    def getWinner(self):
+        whiteAlive = False
+        blackAlive = False
+        for piece in self.pieces:
+            if(piece.type == TYPE.K):
+                if(piece.color == COLOR.WHITE):whiteAlive = True
+                if(piece.color == COLOR.BLACK):blackAlive = True
+        if(not whiteAlive):return COLOR.BLACK
+        if(not blackAlive):return COLOR.WHITE
+        return None
+
     def pieceAt(self, pos):
         for ChessPiece in self.pieces:
             if(ChessPiece.pos.file == pos.file and ChessPiece.pos.rank == pos.rank):
@@ -63,7 +83,7 @@ class ChessBoard:
     def render(self):
         overlayPositions = []
         if(self.overlayOn):
-            overlayPositions = self.overlayPiece.possibleMovementPositionsOnBoard(self)
+            overlayPositions = self.possibleMovementPositionsOf(self.overlayPiece)
         print('-' * 10)
         for rank in range(7, -1, -1):
             print('|', end='')
@@ -165,7 +185,7 @@ class ChessBoard:
             print("You mean it's not your turn, and your trying to move anyways? CHEATER!")
             return False
         occupant = self.pieceAt(move.toPosition)
-        for pos in piece.possibleMovementPositionsOnBoard(self):
+        for pos in self.possibleMovementPositionsOf(piece):
             if(pos.isEqualTo(move.toPosition)):
                 if(occupant != None and occupant.isOpponent(piece) and not move.isCaptureMove):
                     print("Trying to move to a board position with an occupant opponent but not capturing it is strictly forbidden")
@@ -203,8 +223,193 @@ class ChessBoard:
             else:
                 self.fullMoves += 1
                 self.activeColor = COLOR.WHITE
+            self.possibleMovementPositionsCache.clear()
         else:
             print("Tried to play illigal move:", move.notation())
+
+    def possibleMovementPositionsOf(self, piece):
+        assert(piece in self.pieces)
+        if(self.possibleMovementPositionsCache.get(piece) is not None):
+            return self.possibleMovementPositionsCache.get(piece)
+        retVal = []
+        if(piece.type == TYPE.P):
+            if(piece.isWhite):
+                direction = 1
+            if(piece.isBlack):
+                direction = -1
+            # Move directly ahead
+            canPlace = True
+            _pos = piece.pos.copy()
+            _pos.affect(0, 1 * direction)
+            if(not self.emptyPathTo(piece.pos, _pos)):
+                canPlace = False
+            _pos.metaData = POSITION_METADATA.MOVEMENT
+            if(canPlace):
+                retVal.append(_pos)
+            # Directly ahead twice on first move
+            canPlace = True
+            _pos = piece.pos.copy()
+            _pos.affect(0, 2 * direction)
+            if(not self.emptyPathTo(piece.pos, _pos)):
+                canPlace = False
+            if(piece.isWhite and piece.pos.rank != 1):
+                canPlace = False
+            if(piece.isBlack and piece.pos.rank != 6):
+                canPlace = False
+            _pos.metaData = POSITION_METADATA.MOVEMENT
+            if(canPlace):
+                retVal.append(_pos)
+            # Can likely refactor these two attacks into one
+            # Diagonally forward left if occupied by an opponent
+            canPlace = False
+            occupant = self.firstCollidedPieceWithinRange(piece.pos, 1, -1, direction)
+            if(occupant and occupant.isOpponent(piece)):
+                canPlace = True
+                _pos = occupant.pos.copy()
+                _pos.metaData = POSITION_METADATA.ATTACK
+            if(canPlace):
+                retVal.append(_pos)
+            # Diagonally forward right if occupied by an opponent
+            canPlace = False
+            occupant = self.firstCollidedPieceWithinRange(piece.pos, 1, 1, direction)
+            if(occupant and occupant.isOpponent(piece)):
+                canPlace = True
+                _pos = occupant.pos.copy()
+                _pos.metaData = POSITION_METADATA.ATTACK
+            if(canPlace):
+                retVal.append(_pos)
+        elif(piece.type == TYPE.N):
+            positions = []
+            positions.append(ChessPosition(piece.pos.file - 2, piece.pos.rank + 1))
+            positions.append(ChessPosition(piece.pos.file - 1, piece.pos.rank + 2))
+            positions.append(ChessPosition(piece.pos.file + 2, piece.pos.rank + 1))
+            positions.append(ChessPosition(piece.pos.file + 1, piece.pos.rank + 2))
+            positions.append(ChessPosition(piece.pos.file - 2, piece.pos.rank - 1))
+            positions.append(ChessPosition(piece.pos.file - 1, piece.pos.rank - 2))
+            positions.append(ChessPosition(piece.pos.file + 2, piece.pos.rank - 1))
+            positions.append(ChessPosition(piece.pos.file + 1, piece.pos.rank - 2))
+            for position in positions:
+                if(position.isOnBoard()):
+                    occupant = self.pieceAt(position)
+                    if(occupant):
+                        position.metaData = POSITION_METADATA.ATTACK
+                    else:
+                        position.metaData = POSITION_METADATA.MOVEMENT
+                    shouldAdd = True
+                    if(occupant and not occupant.isOpponent(piece)):
+                        shouldAdd = False
+                    if(shouldAdd):
+                        retVal.append(position)
+        elif(piece.type == TYPE.B):
+            positions = []
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d * -1, piece.pos.rank + d *  1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  1, piece.pos.rank + d *  1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d * -1, piece.pos.rank + d * -1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  1, piece.pos.rank + d * -1))
+            for position in positions:
+                canPlace = True
+                if(not self.emptyPathTo(piece.pos, position)):
+                    canPlace = False
+                position.metaData = POSITION_METADATA.MOVEMENT
+                if(canPlace):
+                    retVal.append(position)
+            attackables = []
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8, -1,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  1,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8, -1, -1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  1, -1))
+            for occupant in attackables:
+                if(occupant and occupant.isOpponent(piece)):
+                    _pos = occupant.pos.copy()
+                    _pos.metaData = POSITION_METADATA.ATTACK
+                    retVal.append(_pos)
+        elif(piece.type == TYPE.R):
+            positions = []
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d * -1, piece.pos.rank + d *  0))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  1, piece.pos.rank + d *  0))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  0, piece.pos.rank + d * -1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  0, piece.pos.rank + d *  1))
+            for position in positions:
+                canPlace = True
+                if(not self.emptyPathTo(piece.pos, position)):
+                    canPlace = False
+                position.metaData = POSITION_METADATA.MOVEMENT
+                if(canPlace):
+                    retVal.append(position)
+            attackables = []
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8, -1,  0))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  1,  0))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  0,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  0, -1))
+            for occupant in attackables:
+                if(occupant and occupant.isOpponent(piece)):
+                    _pos = occupant.pos.copy()
+                    _pos.metaData = POSITION_METADATA.ATTACK
+                    retVal.append(_pos)
+        elif(piece.type == TYPE.Q):
+            positions = []
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d * -1, piece.pos.rank + d *  1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  1, piece.pos.rank + d *  1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d * -1, piece.pos.rank + d * -1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  1, piece.pos.rank + d * -1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d * -1, piece.pos.rank + d *  0))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  1, piece.pos.rank + d *  0))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  0, piece.pos.rank + d * -1))
+            for d in range(1, 8):positions.append(ChessPosition(piece.pos.file + d *  0, piece.pos.rank + d *  1))
+            for position in positions:
+                canPlace = True
+                if(not self.emptyPathTo(piece.pos, position)):
+                    canPlace = False
+                position.metaData = POSITION_METADATA.MOVEMENT
+                if(canPlace):
+                    retVal.append(position)
+            attackables = []
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8, -1,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  1,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8, -1, -1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  1, -1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8, -1,  0))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  1,  0))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  0,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 8,  0, -1))
+            for occupant in attackables:
+                if(occupant and occupant.isOpponent(piece)):
+                    _pos = occupant.pos.copy()
+                    _pos.metaData = POSITION_METADATA.ATTACK
+                    retVal.append(_pos)
+        elif(piece.type == TYPE.K):
+            positions = []
+            positions.append(ChessPosition(piece.pos.file + -1, piece.pos.rank +  1))
+            positions.append(ChessPosition(piece.pos.file +  1, piece.pos.rank +  1))
+            positions.append(ChessPosition(piece.pos.file + -1, piece.pos.rank + -1))
+            positions.append(ChessPosition(piece.pos.file +  1, piece.pos.rank + -1))
+            positions.append(ChessPosition(piece.pos.file + -1, piece.pos.rank +  0))
+            positions.append(ChessPosition(piece.pos.file +  1, piece.pos.rank +  0))
+            positions.append(ChessPosition(piece.pos.file +  0, piece.pos.rank + -1))
+            positions.append(ChessPosition(piece.pos.file +  0, piece.pos.rank +  1))
+            for position in positions:
+                canPlace = True
+                if(not self.emptyPathTo(piece.pos, position)):
+                    canPlace = False
+                position.metaData = POSITION_METADATA.MOVEMENT
+                if(canPlace):
+                    retVal.append(position)
+            attackables = []
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1, -1,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1,  1,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1, -1, -1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1,  1, -1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1, -1,  0))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1,  1,  0))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1,  0,  1))
+            attackables.append(self.firstCollidedPieceWithinRange(piece.pos, 1,  0, -1))
+            for occupant in attackables:
+                if(occupant and occupant.isOpponent(piece)):
+                    _pos = occupant.pos.copy()
+                    _pos.metaData = POSITION_METADATA.ATTACK
+                    retVal.append(_pos)
+        self.possibleMovementPositionsCache[piece] = retVal
+        return retVal
 
     def FENNotation(self):
         emptyCount = 0
