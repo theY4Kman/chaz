@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import copy
 
 class POSITION_METADATA:MOVEMENT, ATTACK, NOTHING = range(3)

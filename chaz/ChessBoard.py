@@ -1,3 +1,7 @@
+# Allows print() function instead of print literal in versions < 3. The "end"
+# keyword parameter was not available before then.
+from __future__ import print_function
+
 from ChessPiece import *
 from ChessMove import *
 

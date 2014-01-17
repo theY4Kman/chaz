@@ -11,6 +11,8 @@ Long Algebraic Notation will take on the form
 <Piece symbol> ::= 'N' | 'B' | 'R' | 'Q' | 'K'
 '''
 
+from __future__ import print_function
+
 from ChessBoard import *
 #from ChessPiece import *
 
