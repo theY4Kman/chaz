@@ -41,15 +41,15 @@ class ChessMove:
             assert('-' in notation or 'x' in notation)
             if 'x' in notation:
                 self.isCaptureMove = True
+            if(notation[-1:] in TypeIcons):
+                self.isPromoteMove = True
+                self.promoteType = TypeForIcon(notation[-1:])
+            positions = notation
             if(notation[0] in FileNames):
                 self.type = TYPE.P
                 self.isPawnMove = True
             else:
                 self.type = TypeForIcon(notation[0])
-            if(notation[-1:] in TypeIcons):
-                self.isPromoteMove = True
-                self.promoteType = TypeForIcon(notation[-1:])
-            positions = notation
             if(self.type != TYPE.P):
                 positions = positions[1:]
             if(self.isPromoteMove):
@@ -70,14 +70,15 @@ class ChessMove:
             self.toPosition = args[1]
             pieceFrom = board.pieceAt(self.fromPosition)
             pieceTo = board.pieceAt(self.toPosition)
+            self.type = pieceFrom.type
             if(pieceFrom.type == TYPE.P):
                 self.isPawnMove = True
                 if(pieceFrom.isPositionOnFarthestRank(self.toPosition)):
                     self.isPromoteMove = True
                     self.promoteType = TYPE.Q   # Because... reasons
-            if(pieceFrom.type == TYPE.K and self.toPosition.file == 2):
+            if(not pieceFrom.hasMoved and pieceFrom.type == TYPE.K and self.toPosition.file == 2):
                 self.castleType = CASTLETYPE.Q
-            if(pieceFrom.type == TYPE.K and self.toPosition.file == 6):
+            if(not pieceFrom.hasMoved and pieceFrom.type == TYPE.K and self.toPosition.file == 6):
                 self.castleType = CASTLETYPE.K
             if(pieceTo != None and pieceTo.isOpponent(pieceFrom)):
                 self.isCaptureMove = True
@@ -103,6 +104,8 @@ class ChessMove:
 
     def log(self):
         print(self.notation())
+        if(self.isPawnMove):
+            print("Pawn Move")
         if(self.isCaptureMove):
             print("Capture Move")
         if(self.isPromoteMove):

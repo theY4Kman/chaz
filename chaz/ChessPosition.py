@@ -33,6 +33,9 @@ class ChessPosition:
     def copy(self):
         return copy.deepcopy(self)
 
+    def log(self):
+        print(self.toParsableString())
+
     def affect(self, xDelta, yDelta):
         self.file += xDelta
         self.rank += yDelta

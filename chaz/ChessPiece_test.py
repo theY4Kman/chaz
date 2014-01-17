@@ -111,6 +111,7 @@ simulatorManager.board.setOverlayTo(piece)
 simulatorManager.board.pieces.append(piece)
 simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition("e3")))  # Should not move/attack
 simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("c5")))  # Should move/attack
+simulatorManager.board.pieces.append(ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition("f6")))  # Should prevent movement
 simulatorManager.board.render()
 
 input("Press Enter to continue...")
