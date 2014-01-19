@@ -40,6 +40,7 @@ class ChessBoard:
 
     def reset(self):
         self.mimicFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+        #self.mimicFEN("3k4/7r/1p6/8/8/8/8/K2Q4 b - - 0 1")
 
     def mimicFEN(self, input):
         self.pieces.clear()
@@ -238,7 +239,7 @@ class ChessBoard:
         board = copy.deepcopy(self)
         board.forceMove(move)
         king = board.getKing(self.activeColor)
-        if(move.type != TYPE.K and not board.isPositionSafe(king.pos, self.activeColor)):
+        if(not board.isPositionSafe(king.pos, self.activeColor)):
             print("King is in check and your not going to save him? Same on you")
             return False
         occupant = self.pieceAt(move.toPosition)
@@ -378,6 +379,7 @@ class ChessBoard:
         return retVal
 
     def possibleMovementPositionsOf(self, piece):
+        if(piece is None):return None
         assert(piece in self.pieces)
 #        if(self.possibleMovementPositionsCache.get(piece) is not None):
 #            return self.possibleMovementPositionsCache.get(piece)
