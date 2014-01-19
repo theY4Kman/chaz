@@ -76,9 +76,9 @@ class ChessMove:
                 if(pieceFrom.isPositionOnFarthestRank(self.toPosition)):
                     self.isPromoteMove = True
                     self.promoteType = TYPE.Q   # Because... reasons
-            if(not pieceFrom.hasMoved and pieceFrom.type == TYPE.K and self.toPosition.file == 2):
+            if(pieceFrom.type == TYPE.K and pieceFrom.canCastleQueenside and self.toPosition.file == 2):
                 self.castleType = CASTLETYPE.Q
-            if(not pieceFrom.hasMoved and pieceFrom.type == TYPE.K and self.toPosition.file == 6):
+            if(pieceFrom.type == TYPE.K and pieceFrom.canCastleKingside and self.toPosition.file == 6):
                 self.castleType = CASTLETYPE.K
             if(pieceTo != None and pieceTo.isOpponent(pieceFrom)):
                 self.isCaptureMove = True

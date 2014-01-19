@@ -1,4 +1,5 @@
 from __future__ import print_function
+import re
 
 from ChessPiece import *
 from ChessMove import *
@@ -28,42 +29,64 @@ from ChessMove import *
 class ChessBoard:
 
     def __init__(self, *args):
+        self.overlayOn = False
+        self.overlayPiece = None
+        self.possibleMovementPositionsCache = {}
+        self.pieces = []
         if len(args) == 0:
-            self.pieces = []
-            self.activeColor = COLOR.WHITE
-            self.halfMoves = 0
-            self.fullMoves = 1
-            self.overlayOn = False
-            self.overlayPiece = None
             self.reset()
-            self.possibleMovementPositionsCache = {}
         elif len(args) == 1:
-            # TODO: Set board to mimic FEN input
-            raise NotImplementedError()
+            self.mimicFEN(args[0])
 
     def reset(self):
-        for d in range(0, 8):
-            self.pieces.append(ChessPiece(TYPE.P, COLOR.WHITE, ChessPosition(d, 1)))
-        self.pieces.append(ChessPiece(TYPE.R, COLOR.WHITE, ChessPosition("a1")))
-        self.pieces.append(ChessPiece(TYPE.N, COLOR.WHITE, ChessPosition("b1")))
-        self.pieces.append(ChessPiece(TYPE.B, COLOR.WHITE, ChessPosition("c1")))
-        self.pieces.append(ChessPiece(TYPE.Q, COLOR.WHITE, ChessPosition("d1")))
-        self.whiteKing = ChessPiece(TYPE.K, COLOR.WHITE, ChessPosition("e1"))
-        self.pieces.append(self.whiteKing)
-        self.pieces.append(ChessPiece(TYPE.B, COLOR.WHITE, ChessPosition("f1")))
-        self.pieces.append(ChessPiece(TYPE.N, COLOR.WHITE, ChessPosition("g1")))
-        self.pieces.append(ChessPiece(TYPE.R, COLOR.WHITE, ChessPosition("h1")))
-        for d in range(0, 8):
-            self.pieces.append(ChessPiece(TYPE.P, COLOR.BLACK, ChessPosition(d, 6)))
-        self.pieces.append(ChessPiece(TYPE.R, COLOR.BLACK, ChessPosition("a8")))
-        self.pieces.append(ChessPiece(TYPE.N, COLOR.BLACK, ChessPosition("b8")))
-        self.pieces.append(ChessPiece(TYPE.B, COLOR.BLACK, ChessPosition("c8")))
-        self.pieces.append(ChessPiece(TYPE.Q, COLOR.BLACK, ChessPosition("d8")))
-        self.blackKing = ChessPiece(TYPE.K, COLOR.BLACK, ChessPosition("e8"))
-        self.pieces.append(self.blackKing)
-        self.pieces.append(ChessPiece(TYPE.B, COLOR.BLACK, ChessPosition("f8")))
-        self.pieces.append(ChessPiece(TYPE.N, COLOR.BLACK, ChessPosition("g8")))
-        self.pieces.append(ChessPiece(TYPE.R, COLOR.BLACK, ChessPosition("h8")))
+        self.mimicFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+
+    def mimicFEN(self, input):
+        self.pieces.clear()
+        sections = input.split()
+        rows = sections[0].split('/')
+        for row in range(0, 8):
+            file = 0
+            for value in rows[row]:
+                if(value in "12345678"):
+                    file += int(value)
+                else:
+                    type = TypeForIcon(value)
+                    color = ColorForIcon(value)
+                    self.pieces.append(ChessPiece(type, color, ChessPosition(file, 7-row)))
+                    file += 1
+        if(sections[1] == 'w'):self.activeColor = COLOR.WHITE
+        elif(sections[1] == 'b'):self.activeColor = COLOR.BLACK
+        whiteKing = self.getKing(COLOR.WHITE)
+        blackKing = self.getKing(COLOR.WHITE)
+        # I don't like this, refactor later
+        if('K' in sections[2]):
+            if(whiteKing):whiteKing.canCastleKingside = True
+        else:
+            if(whiteKing):whiteKing.canCastleKingside = False
+        if('Q' in sections[2]):
+            if(whiteKing):whiteKing.canCastleQueenside = True
+        else:
+            if(whiteKing):whiteKing.canCastleQueenside = False
+        if('k' in sections[2]):
+            if(blackKing):blackKing.canCastleKingside = True
+        else:
+            if(blackKing):blackKing.canCastleKingside = False
+        if('q' in sections[2]):
+            if(blackKing):blackKing.canCastleQueenside = True
+        else:
+            if(blackKing):blackKing.canCastleQueenside = False
+        if(sections[3] != "-"):
+            # En Passant counts the space behind the moved pawn
+            behindPosition = ChessPosition(sections[3])
+            if(self.activeColor == COLOR.WHITE):direction = -1
+            if(self.activeColor == COLOR.BLACK):direction =  1
+            behindPosition.rank += direction
+            pawn = self.pieceAt(behindPosition)
+            assert(pawn is not None)
+            pawn.pawnJustMovedForwardTwice = True
+        self.halfMoves = int(sections[4])
+        self.fullMoves = int(sections[5])
 
     def clear(self):
         self.turnOffOverlay()
@@ -253,8 +276,24 @@ class ChessBoard:
                 pass
             if(move.castleType == CASTLETYPE.Q):
                 pass
+
+            if(move.type == TYPE.K):
+                king = self.pieceAt(move.fromPosition)
+                if(king is not None):
+                    king.canCastleKingside = False
+                    king.canCastleQueenside = False
+
+            if(move.type == TYPE.R):
+                rook = self.pieceAt(move.fromPosition)
+                king = self.getKing(rook.color)
+                if(rook is not None and king is not None):
+                    # Who cares if the rook has moved already, we only care about the first move
+                    if(rook.pos.file == 0):
+                        king.canCastleQueenside = False
+                    if(rook.pos.file == 7):
+                        king.canCastleKingside = False
+
             piece.pos = move.toPosition
-            piece.hasMoved = True
 
             if(move.isPawnMove or move.isCaptureMove):
                 self.halfMoves = 0
@@ -440,13 +479,13 @@ class ChessBoard:
         blackKing = self.pieceAt(ChessPosition("e8"))
         blackQueenSideRook = self.pieceAt(ChessPosition("a8"))
         blackKingSideRook = self.pieceAt(ChessPosition("h8"))
-        if((whiteKing is not None and whiteKingSideRook is not None) and (not whiteKing.hasMoved and not whiteKingSideRook.hasMoved)):
+        if(whiteKing is not None and whiteKing.canCastleKingside):
             castling += "K"
-        if((whiteKing is not None and whiteQueenSideRook is not None) and (not whiteKing.hasMoved and not whiteQueenSideRook.hasMoved)):
+        if(whiteKing is not None and whiteKing.canCastleQueenside):
             castling += "Q"
-        if((blackKing is not None and blackKingSideRook is not None) and (not blackKing.hasMoved and not blackKingSideRook.hasMoved)):
+        if(blackKing is not None and blackKing.canCastleKingside):
             castling += "k"
-        if((blackKing is not None and blackQueenSideRook is not None) and (not blackKing.hasMoved and not blackQueenSideRook.hasMoved)):
+        if(blackKing is not None and blackKing.canCastleQueenside):
             castling += "q"
         if(castling == ""):
             castling += "-"

@@ -24,6 +24,11 @@ def TypeForIcon(icon):
     if(icon == 'k'):return TYPE.K
 
 
+def ColorForIcon(icon):
+    if(icon in "PNBRQK"):return COLOR.WHITE
+    if(icon in "pnbrqk"):return COLOR.BLACK
+
+
 class COLOR:WHITE, BLACK = range(2)
 
 
@@ -33,8 +38,9 @@ class ChessPiece:
         self.type = type
         self.setColor(color)
         self.pos = pos
-        self.hasMoved = False
         self.pawnJustMovedForwardTwice = False
+        self.canCastleKingside = True
+        self.canCastleQueenside = True
         self.startingPos = self.pos.copy()
 
     # Decided to set local variables instead of methods so I don't call self.isWhite instead of self.isWhite() by accident
